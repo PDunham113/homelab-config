@@ -1,0 +1,33 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby
+
+################################################################################
+# Project Settings
+################################################################################
+# Name of project, By default, will be used to configure the VM Name & project
+# folder
+$project_name = "hounds-of-hell"
+
+
+################################################################################
+# Project Dependencies
+################################################################################
+
+# Custom Debian packages installed with apt-get
+$server_apt_packages = "\
+  avahi-daemon \
+  git \
+"
+
+################################################################################
+# Project Provisioning Scripts
+################################################################################
+
+# Configure project-specific settings
+$configure_server_settings = <<EOT
+EOT
+
+# Configure project-specific tools
+$configure_server_tools = <<EOT
+  /home/vagrant/#{$project_name}/config/setup_nginx
+EOT

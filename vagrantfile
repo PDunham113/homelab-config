@@ -1,0 +1,95 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+################################################################################
+# Constants
+################################################################################
+
+# Define vagrantfile locations
+ex_vagrantfile = File.expand_path("./vagrantfile.local.example", __dir__)
+local_vagrantfile = File.expand_path("./vagrantfile.local", __dir__)
+project_vagrantfile = File.expand_path("./vagrantfile.project", __dir__)
+
+# Use the current Git SHA1 as the VM version number.
+$vm_version = `git rev-parse HEAD`
+################################################################################
+# VM Configuration
+################################################################################
+
+# Load project configuration
+load project_vagrantfile if File.exists?(project_vagrantfile)
+
+# Load local configuration. If it doesn't exist, copy example
+if !File.exists?(local_vagrantfile)
+  print "Creating local vagrantfile...\n"
+  FileUtils.cp(ex_vagrantfile, local_vagrantfile)
+end
+load local_vagrantfile
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure("2") do |config|
+  # Every Vagrant development environment requires a box. You can search for
+  # boxes at https://vagrantcloud.com/search.
+  config.vm.box = "bento/ubuntu-20.04"
+
+  # Share an additional folder to the guest VM. The first argument is
+  # the path on the host to the actual folder. The second argument is
+  # the path on the guest to mount the folder. And the optional third
+  # argument is a set of non-required options.
+  config.vm.synced_folder "./", "/home/vagrant/#{$project_name}/"
+
+  # Enable X11 forwarding
+  config.ssh.forward_x11 = true
+  config.ssh.forward_agent = true
+
+  # Add SSH keys
+  if $ssh_public_key != ""
+    config.vm.provision "file",
+    source: "#{$ssh_key_location}/#{$ssh_public_key}",
+    destination: "~/.ssh/#{$ssh_public_key}"
+  end
+
+  # Copy global file lists
+  for file in $files
+    if File.exists?(file)
+      file.sub! "#{ENV['HOME']}", "~/"
+      config.vm.provision "file", source: file, destination: file
+    end
+  end
+  # Store the version of the Vagrant configuration used to provision the VM
+  config.vm.provision "version", type: "shell" do |s|
+    s.inline = "echo -n \"#{$vm_version}\" > /home/vagrant/.vm_version"
+  end
+
+  # Proxy Server
+  config.vm.define "proxy" do |proxy|
+    proxy.vm.hostname = "proxy.local"
+
+    proxy.vm.provision "shell", inline: $configure_server_settings
+
+    proxy.vm.provision "shell", inline: "\
+      echo 'Installing apt packages'; \
+      export DEBIAN_FRONTEND=noninteractive; \
+      apt-get update; \
+      apt-get install -y #{$server_apt_packages}; \
+      "
+
+    proxy.vm.provision "shell", inline: $configure_server_tools
+
+    # VirtualBox Config
+    proxy.vm.provider "virtualbox" do |vb|
+      # Display the VM name in the VirtualBox GUI
+      vb.name = "#{$project_name}_#{proxy.vm.hostname}"
+
+      # Specify the number of cores for the VM
+      vb.cpus = $num_cpus
+
+      # Specify the amount of memory for the VM [MB]
+      vb.memory = $memory_size
+    end
+  end
+
+end

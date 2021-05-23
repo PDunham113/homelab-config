@@ -1,0 +1,21 @@
+#!/bin/bash
+bash -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+readonly SCRIPT_DIR
+
+main () {
+  install_nginx
+  config_nginx
+}
+
+config_nginx () {
+  ufw allow 'Nginx HTTP'
+  ufw allow 'Nginx HTTPS'
+}
+
+install_nginx () {
+  apt-get install nginx
+}
+
+main "$@"
