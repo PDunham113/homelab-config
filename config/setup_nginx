@@ -1,10 +1,11 @@
 #!/bin/bash
-bash -e
+set -e
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 readonly SCRIPT_DIR
 
 main () {
+  apt-get update
   install_nginx
   config_nginx
 }
@@ -15,7 +16,7 @@ config_nginx () {
 }
 
 install_nginx () {
-  apt-get install nginx
+  apt-get install -y nginx
 }
 
 main "$@"
